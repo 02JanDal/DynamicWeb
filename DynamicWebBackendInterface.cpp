@@ -56,3 +56,5 @@ void DynamicWebNullBackend::reload()
 {
 	qCritical() << "DynamicWebNullBackend::reload: Null backend";
 }
+
+#include "moc_DynamicWebBackendInterface_p.cpp"

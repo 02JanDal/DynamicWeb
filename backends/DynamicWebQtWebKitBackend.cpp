@@ -4,11 +4,7 @@
 #include <QWebView>
 #include <QWebHistory>
 
-void *DynamicWeb_createBackend()
-{
-	return new DynamicWebQtWebKitBackend();
-}
-
+DYNAMICWEB_EXPORT_BACKEND("QtWebKit", DynamicWebQtWebKitBackend)
 
 DynamicWebQtWebKitBackend::DynamicWebQtWebKitBackend()
 	: DynamicWebBackendInterface(), m_web(new QWebView)

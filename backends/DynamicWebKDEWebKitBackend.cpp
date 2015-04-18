@@ -6,11 +6,7 @@
 
 // TODO this shares 99% of code with the QtWebKit backend. unify!
 
-void *DynamicWeb_createBackend()
-{
-	return new DynamicWebKDEWebKitBackend();
-}
-
+DYNAMICWEB_EXPORT_BACKEND("KDEWebKit", DynamicWebKDEWebKitBackends)
 
 DynamicWebKDEWebKitBackend::DynamicWebKDEWebKitBackend()
 	: DynamicWebBackendInterface(), m_web(new KWebView)

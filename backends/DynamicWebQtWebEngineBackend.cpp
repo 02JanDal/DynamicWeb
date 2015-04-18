@@ -4,10 +4,7 @@
 #include <QWebEngineView>
 #include <QWebEngineHistory>
 
-void *DynamicWeb_createBackend()
-{
-	return new DynamicWebQtWebEngineBackend();
-}
+DYNAMICWEB_EXPORT_BACKEND("QtWebEngine", DynamicWebQtWebEngineBackend)
 
 DynamicWebQtWebEngineBackend::DynamicWebQtWebEngineBackend()
 	: DynamicWebBackendInterface(), m_web(new QWebEngineView)

@@ -8,7 +8,7 @@
 
 #include "DynamicWebBackendInterface_p.h"
 
-Q_GLOBAL_STATIC(QList<QSharedPointer<DynamicWebBackendInterface>>, g_backends)
+Q_GLOBAL_STATIC(QList<BackendInfo *>, g_backends)
 
 static QString libSuffix()
 {
@@ -25,9 +25,9 @@ static QSharedPointer<DynamicWebBackendInterface> backendForId(const QString &id
 
 	for (auto backend : *g_backends)
 	{
-		if (backend->id() == id)
+		if (backend->id == id)
 		{
-			return backend;
+			return QSharedPointer<DynamicWebBackendInterface>(backend->creator());
 		}
 	}
 	return {};
@@ -58,7 +58,7 @@ QStringList DynamicWebWindow::availableBackends()
 {
 	if (g_backends->isEmpty())
 	{
-		auto tryLoad = [](const QString &filename) -> QSharedPointer<DynamicWebBackendInterface>
+		auto tryLoad = [](const QString &filename) -> BackendInfo *
 		{
 			if (!QLibrary::isLibrary(filename) || !QFile::exists(filename))
 			{
@@ -70,14 +70,14 @@ QStringList DynamicWebWindow::availableBackends()
 				qWarning() << "DynamicWebWindow::availableBackends: Unable to load" << filename << ":" << lib.errorString();
 				return {};
 			}
-			using Function = void *(*)();
-			Function func = (Function)lib.resolve("DynamicWeb_createBackend");
+			using Function = BackendInfo *(*)();
+			Function func = (Function)lib.resolve("DynamicWeb_entry");
 			if (!func)
 			{
 				qWarning() << "DynamicWebWindow::availableBackends: Unable to resolve entry point for" << filename;
 				return {};
 			}
-			return QSharedPointer<DynamicWebBackendInterface>((DynamicWebBackendInterface *)func());
+			return func();
 		};
 
 		// highest order: environment variable
@@ -85,12 +85,12 @@ QStringList DynamicWebWindow::availableBackends()
 		{
 			const QString envName = qgetenv("DYNAMICWEB_BACKEND");
 
-			QSharedPointer<DynamicWebBackendInterface> fromEnv;
+			BackendInfo *fromEnv = nullptr;
 			if (QFile::exists(envName))
 			{
 				fromEnv = tryLoad(envName);
 			}
-			if (fromEnv.isNull())
+			if (!fromEnv || !fromEnv->creator)
 			{
 				qWarning() << "DynamicWebWindow::availableBackends: Unable to load backend defined by environment variable";
 			}
@@ -101,23 +101,23 @@ QStringList DynamicWebWindow::availableBackends()
 		}
 
 		// second highest: list of known backends
-		for (const QString name : {"KDEWebKit", "QtWebEngine", "QtWebKit"})
+		for (const QString name : {"OSX", "KDEWebKit", "QtWebEngine", "QtWebKit"})
 		{
-			QSharedPointer<DynamicWebBackendInterface> result = tryLoad("DynamicWeb_" + name + libSuffix());
-			if (!result.isNull())
+			BackendInfo *result = tryLoad("DynamicWeb_" + name + libSuffix());
+			if (result && result->creator)
 			{
 				g_backends->append(result);
 			}
 		}
 
 		// lowest order: a null/dummy backend to prevent hard crashes
-		g_backends->append(QSharedPointer<DynamicWebNullBackend>::create());
+		g_backends->append(new BackendInfo("Null", &DynamicWebNullBackend::create));
 	}
 
 	QStringList ids;
 	for (const auto backend : *g_backends)
 	{
-		ids.append(backend->id());
+		ids.append(backend->id);
 	}
 	return ids;
 }

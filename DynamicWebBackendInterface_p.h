@@ -43,6 +43,8 @@ class DynamicWebNullBackend : public DynamicWebBackendInterface
 public:
 	explicit DynamicWebNullBackend() {}
 
+	static DynamicWebBackendInterface *create() { return new DynamicWebNullBackend; }
+
 	QString id() const override { return "Null"; }
 
 	QUrl url() const override;
@@ -62,7 +64,26 @@ public slots:
 	void reload() override;
 };
 
+struct BackendInfo
+{
+	using CreatorFunc = DynamicWebBackendInterface *(*)();
+
+	explicit BackendInfo(const QString &id, CreatorFunc creator)
+		: id(id), creator(creator) {}
+
+	QString id;
+	CreatorFunc creator = 0;
+};
 extern "C"
 {
-extern void *DynamicWeb_createBackend();
+extern BackendInfo *DynamicWeb_entry();
 }
+#define DYNAMICWEB_EXPORT_BACKEND(id, clazz) \
+	static DynamicWebBackendInterface *DynamicWeb_creator() { return new clazz; } \
+	BackendInfo *DynamicWeb_entry() \
+	{ \
+		return new BackendInfo( \
+					id, \
+					&DynamicWeb_creator \
+		); \
+	}

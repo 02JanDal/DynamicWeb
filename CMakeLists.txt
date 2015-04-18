@@ -39,7 +39,7 @@ function(add_backend)
 	if("${ADD_BACKEND_SRCS}" STREQUAL "")
 		set(ADD_BACKEND_SRCS backends/DynamicWeb${ADD_BACKEND_NAME}Backend_p.h backends/DynamicWeb${ADD_BACKEND_NAME}Backend.cpp)
 	endif()
-	list(APPEND ADD_BACKEND_LIBS Qt5::Core Qt5::Gui)
+	list(APPEND ADD_BACKEND_LIBS Qt5::Core Qt5::Gui DynamicWeb)
 
 	add_library(${_target} MODULE ${ADD_BACKEND_SRCS})
 	target_link_libraries(${_target} ${ADD_BACKEND_LIBS})
@@ -47,17 +47,28 @@ function(add_backend)
 	install(TARGETS ${_target} DESTINATION lib)
 endfunction()
 
-find_package(Qt5WebKitWidgets)
+find_package(Qt5WebKitWidgets QUIET)
 if(Qt5WebKitWidgets_FOUND)
 	add_backend(NAME QtWebKit LIBS Qt5::WebKitWidgets)
 endif()
 
-find_package(Qt5WebEngineWidgets)
+find_package(Qt5WebEngineWidgets QUIET)
 if(Qt5WebEngine_FOUND)
 	add_backend(NAME QtWebEngine LIBS Qt5::WebEngineWidgets)
 endif()
 
-find_package(KF5WebKit)
+find_package(KF5WebKit QUIET)
 if(KF5WebKit_FOUND)
 	add_backend(NAME KDEWebKit LIBS KF5::WebKit)
+endif()
+
+if(APPLE)
+	find_library(COCOA_LIBRARY Cocoa)
+	find_library(WEBKIT_LIBRARY WebKit)
+	if(COCOA_LIBRARY AND WEBKIT_LIBRARY)
+		add_backend(NAME OSX
+			SRCS backends/DynamicWebOSXBackend_p.h backends/DynamicWebOSXBackend.mm
+			LIBS ${COCOA_LIBRARY} ${WEBKIT_LIBRARY}
+		)
+	endif()
 endif()
