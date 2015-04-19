@@ -4,6 +4,8 @@
 #include <QGlobalStatic>
 #include <QWidget>
 #include <QDebug>
+#include <QGuiApplication>
+#include <5.2.0/QtGui/qpa/qplatformnativeinterface.h>
 
 #include <windows.h>
 #include <exdisp.h>
@@ -12,6 +14,33 @@
 DYNAMICWEB_EXPORT_BACKEND("Windows", DynamicWebWindowsBackend)
 
 static int g_oleInitialized = 0;
+
+static QWindow *windowForWidget(QWidget *widget)
+{
+	if (QWindow *window = widget->windowHandle())
+	{
+		return window;
+	}
+	else if (QWidget *nativeParent = widget->nativeParentWidget())
+	{
+		return nativeParent->windowHandle();
+	}
+	else
+	{
+		return nullptr;
+	}
+}
+static HWND hwndForWidget(QWidget *widget)
+{
+	if (QWindow *window = windowForWidget(widget))
+	{
+		return static_cast<HWND>(QGuiApplication::platformNativeInterface()->nativeResourceForWindow("handle", window));
+	}
+	else
+	{
+		return nullptr;
+	}
+}
 
 DynamicWebWindowsBackend::DynamicWebWindowsBackend()
 	: DynamicWebBackendInterface()
@@ -30,7 +59,7 @@ DynamicWebWindowsBackend::DynamicWebWindowsBackend()
 	///////////////////////////////////////////////////////////////////////
 
 	m_widget = new QWidget;
-	HWND hwnd = (HWND)m_widget->winId();
+	HWND hwnd = hwndForWidget(m_widget);
 
 	LPCLASSFACTORY classFactory = NULL;
 	if (!CoGetClassObject(CLSID_WebBrowser, CLSCTX_INPROC_SERVER | CLSCTX_INPROC_HANDLER, NULL, IID_IClassFactory, (void **)&classFactory) && classFactory)
@@ -42,19 +71,19 @@ DynamicWebWindowsBackend::DynamicWebWindowsBackend()
 			Q_ASSERT(browserObject);
 			classFactory->Release();
 
-			char *ptr;
-			*((IOleObject **) ptr) = browserObject;
-			SetWindowLong(hwnd, GWL_USERDATA, (LONG)ptr);
-
-			if (!browserObject->SetClientSite((IOleClientSite *)oleClientSite))
+			if (!browserObject->SetClientSite(oleClientSite))
 			{
 				browserObject->SetHostNames(L"My Host Name", 0);
 
 				RECT rect;
 				GetClientRect(hwnd, &rect);
 
+				//qDebug() << SUCCEEDED(OleSetContainedObject((IUnknown *)browserObject, TRUE))
+				//		 << SUCCEEDED(browserObject->DoVerb(OLEIVERB_SHOW, NULL, oleClientSite, -1, hwnd, &rect))
+				//		 << SUCCEEDED(browserObject->QueryInterface(IID_IWebBrowser2, (void **)&m_web));
+
 				if (!OleSetContainedObject((IUnknown *)browserObject, TRUE) &&
-						!browserObject->DoVerb(OLEIVERB_SHOW, NULL, (IOleClientSite *)oleClientSite, -1, hwnd, &rect) &&
+						//!browserObject->DoVerb(OLEIVERB_SHOW, NULL, oleClientSite, -1, hwnd, &rect) &&
 						!browserObject->QueryInterface(IID_IWebBrowser2, (void **)&m_web))
 				{
 					m_web->put_Left(0);
@@ -62,13 +91,17 @@ DynamicWebWindowsBackend::DynamicWebWindowsBackend()
 					m_web->put_Width(rect.right);
 					m_web->put_Height(rect.bottom);
 				}
+				else
+				{
+					Q_ASSERT(false);
+				}
 			}
 		}
 	}
 
 	///////////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////////
-	///////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////´+
 
 	/*
 	CoCreateInstance(CLSID_WebBrowser, NULL, CLSCTX_INPROC, IID_IWebBrowser2, (void **)&m_web);
