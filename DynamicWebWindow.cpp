@@ -44,6 +44,7 @@ DynamicWebWindow::DynamicWebWindow(const QString &backend, QWidget *parent)
 DynamicWebWindow::DynamicWebWindow(QSharedPointer<DynamicWebBackendInterface> backend, QWidget *parent)
 	: QWidget(parent), m_backend(backend)
 {
+	qDebug() << "Using backend:" << backend->id();
 	m_widget = m_backend->widget();
 	Q_ASSERT(m_widget);
 	m_widget->setParent(this);
@@ -101,7 +102,7 @@ QStringList DynamicWebWindow::availableBackends()
 		}
 
 		// second highest: list of known backends
-		for (const QString name : {"OSX", "KDEWebKit", "QtWebEngine", "QtWebKit"})
+		for (const QString name : {"Windows", "OSX", "KDEWebKit", "QtWebEngine", "QtWebKit"})
 		{
 			BackendInfo *result = tryLoad("DynamicWeb_" + name + libSuffix());
 			if (result && result->creator)

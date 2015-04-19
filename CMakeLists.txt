@@ -1,12 +1,14 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 2.8.12)
 
 project(DynamicWeb)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -std=c++11)
+if(NOT WIN OR MINGW)
+	set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -std=c++11)
+endif()
 
-find_package(Qt5 REQUIRED COMPONENTS Core Gui)
+find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets)
 
 # Base library
 
@@ -39,7 +41,7 @@ function(add_backend)
 	if("${ADD_BACKEND_SRCS}" STREQUAL "")
 		set(ADD_BACKEND_SRCS backends/DynamicWeb${ADD_BACKEND_NAME}Backend_p.h backends/DynamicWeb${ADD_BACKEND_NAME}Backend.cpp)
 	endif()
-	list(APPEND ADD_BACKEND_LIBS Qt5::Core Qt5::Gui DynamicWeb)
+	list(APPEND ADD_BACKEND_LIBS Qt5::Core Qt5::Gui Qt5::Widgets DynamicWeb)
 
 	add_library(${_target} MODULE ${ADD_BACKEND_SRCS})
 	target_link_libraries(${_target} ${ADD_BACKEND_LIBS})
@@ -71,4 +73,8 @@ if(APPLE)
 			LIBS ${COCOA_LIBRARY} ${WEBKIT_LIBRARY}
 		)
 	endif()
+endif()
+
+if(WIN32)
+	add_backend(NAME Windows)
 endif()
